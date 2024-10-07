@@ -7,8 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
+
 import org.springframework.web.bind.annotation.RequestParam;
+
+import io.github.bucket4j.Bucket;
 
 import java.util.Optional;
 
@@ -18,8 +20,17 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private Bucket addMoneyBucket;
+
+    @Autowired
+    private Bucket transferMoneyBucket;
+
     @GetMapping("/{id}/add-money")
     public ResponseEntity<String> addMoney(@PathVariable Long id) {
+        if (!addMoneyBucket.tryConsume(1)) {
+            return ResponseEntity.status(429).body("vuot qua gioi han . thu lai.");
+        }
         Optional<User> userOpt = userRepository.findById(id);
 
         if (userOpt.isPresent()) {
@@ -31,9 +42,14 @@ public class UserController {
         }
         return ResponseEntity.status(404).body("khong tim thay user");
     }
+
     // API chuyển tiền giữa hai user
     @GetMapping("/transfer")
-    public ResponseEntity<String> transferMoney(@RequestParam("fromID") Long fromUserId, @RequestParam("toID") Long toUserId) {
+    public ResponseEntity<String> transferMoney(@RequestParam("fromID") Long fromUserId,
+            @RequestParam("toID") Long toUserId) {
+        if (!transferMoneyBucket.tryConsume(1)) {
+            return ResponseEntity.status(429).body("vuot qua gioi han. thu lai.");
+        }
         Optional<User> fromUserOpt = userRepository.findById(fromUserId);
         Optional<User> toUserOpt = userRepository.findById(toUserId);
 
@@ -48,7 +64,8 @@ public class UserController {
                 userRepository.save(fromUser);
                 userRepository.save(toUser);
 
-                return ResponseEntity.ok("chuyen thanh cong. FromUser : " + fromUser.getMoney() + ", ToUser  " + toUser.getMoney());
+                return ResponseEntity
+                        .ok("chuyen thanh cong. FromUser : " + fromUser.getMoney() + ", ToUser  " + toUser.getMoney());
             } else {
                 return ResponseEntity.status(400).body("khong du tien de chuyen");
             }
