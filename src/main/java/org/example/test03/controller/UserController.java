@@ -3,8 +3,12 @@ package org.example.test03.controller;
 import org.example.test03.model.User;
 import org.example.test03.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -20,22 +24,23 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private Bucket addMoneyBucket;
+    // @Autowired
+    // private Bucket addMoneyBucket;
 
-    @Autowired
-    private Bucket transferMoneyBucket;
+    // @Autowired
+    // private Bucket transferMoneyBucket;
 
+    @Retryable(value = OptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
+    @Transactional
     @GetMapping("/{id}/add-money")
     public ResponseEntity<String> addMoney(@PathVariable Long id) {
-        if (!addMoneyBucket.tryConsume(1)) {
-            return ResponseEntity.status(429).body("vuot qua gioi han . thu lai.");
-        }
+        // if (!addMoneyBucket.tryConsume(1)) {
+        // return ResponseEntity.status(429).body("vuot qua gioi han . thu lai.");
+        // }
         Optional<User> userOpt = userRepository.findById(id);
 
         if (userOpt.isPresent()) {
             User user = userOpt.get();
-            System.out.println(user.getId());
             user.setMoney(user.getMoney() + 100);
             userRepository.save(user);
             return ResponseEntity.ok("them 100 thanh cong " + user.getMoney());
@@ -44,12 +49,14 @@ public class UserController {
     }
 
     // API chuyển tiền giữa hai user
+    @Retryable(value = OptimisticLockingFailureException.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
+    @Transactional
     @GetMapping("/transfer")
     public ResponseEntity<String> transferMoney(@RequestParam("fromID") Long fromUserId,
             @RequestParam("toID") Long toUserId) {
-        if (!transferMoneyBucket.tryConsume(1)) {
-            return ResponseEntity.status(429).body("vuot qua gioi han. thu lai.");
-        }
+        // if (!transferMoneyBucket.tryConsume(1)) {
+        // return ResponseEntity.status(429).body("vuot qua gioi han. thu lai.");
+        // }
         Optional<User> fromUserOpt = userRepository.findById(fromUserId);
         Optional<User> toUserOpt = userRepository.findById(toUserId);
 

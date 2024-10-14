@@ -12,7 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 
 @Entity
-@Table(name ="test03",schema="test03",uniqueConstraints = @UniqueConstraint(columnNames ="name"))
+@Table(name = "test03", schema = "test03", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
 
 public class User {
 
@@ -24,4 +24,7 @@ public class User {
 
     @Column(name = "money", columnDefinition = "BIGINT default 0")
     private Long Money;
+
+    @Version
+    private int version;
 }
